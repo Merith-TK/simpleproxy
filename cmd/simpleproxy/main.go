@@ -13,9 +13,9 @@ import (
 
 func main() {
 	flag.Parse()
-	configPath := os.Getenv("GOPROXY_CONFIG")
+	configPath := os.Getenv("SIMPLEPROXY_CONFIG")
 	if configPath == "" || flag.Arg(0) == "" {
-		configPath = "goproxy.json" // Default path for Docker
+		configPath = "simpleproxy.json" // Default path for Docker
 	}
 
 	config := ReadConfig(configPath)
