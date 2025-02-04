@@ -1,0 +1,37 @@
+name: Build and Publish Docker Image on Tag
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-and-publish:
+    runs-on: docker-builder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set REPO_VARS
+        id: repo-url
+        run: |
+          echo "REPO_HOST=$(echo "${{ github.server_url }}" | sed 's~http[s]*://~~g')" >> $GITHUB_ENV
+          echo "REPO_PATH=${{ github.repository }}" >> $GITHUB_ENV
+
+      - name: Login to OCI registry
+        run: |
+          echo "${{ secrets.OCI_TOKEN }}" | docker login $REPO_HOST -u "${{ secrets.OCI_USER }}" --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          TAG=${{ github.ref_name }} # Get the tag name from the context
+          # Build and push multi-platform Docker images
+          docker build -t $REPO_HOST/$REPO_PATH:$TAG --push .
+          # Tag and push latest
+          docker tag $REPO_HOST/$REPO_PATH:$TAG $REPO_HOST/$REPO_PATH:latest
+          docker push $REPO_HOST/$REPO_PATH:latest
+
+          # Remove the local image to save storage
+          docker rmi $REPO_HOST/$REPO_PATH:$TAG
+          docker rmi $REPO_HOST/$REPO_PATH:latest

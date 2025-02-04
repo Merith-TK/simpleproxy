@@ -1,0 +1,40 @@
+name: Build Docker Image on Commit
+
+on:
+  push:
+    branches:
+      - main
+    tags: 
+      - '!' # Exclude tags
+
+jobs:
+  build-and-publish:
+    runs-on: docker-builder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set REPO_VARS
+        id: repo-url
+        run: |
+          echo "REPO_HOST=$(echo "${{ github.server_url }}" | sed 's~http[s]*://~~g')" >> $GITHUB_ENV
+          echo "REPO_PATH=${{ github.repository }}" >> $GITHUB_ENV
+
+      - name: Login to OCI registry
+        run: |
+          echo "${{ secrets.OCI_TOKEN }}" | docker login $REPO_HOST -u "${{ secrets.OCI_USER }}" --password-stdin
+
+      - name: Build and push Docker images
+        run: |
+          # Build Docker image with commit SHA
+          docker build -t $REPO_HOST/$REPO_PATH:${{ github.sha }} .
+          docker push $REPO_HOST/$REPO_PATH:${{ github.sha }}
+
+          # Build Docker image with nightly tag
+          docker tag $REPO_HOST/$REPO_PATH:${{ github.sha }} $REPO_HOST/$REPO_PATH:nightly
+          docker push $REPO_HOST/$REPO_PATH:nightly
+
+          # Remove local images to save storage
+          docker rmi $REPO_HOST/$REPO_PATH:${{ github.sha }}
+          docker rmi $REPO_HOST/$REPO_PATH:nightly
