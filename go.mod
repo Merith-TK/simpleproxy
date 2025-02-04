@@ -1,4 +1,4 @@
-module github.com/merith-tk/simpleproxy
+module github.com/Merith-TK/simpleproxy
 
 go 1.22.5
 
