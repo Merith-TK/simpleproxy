@@ -14,7 +14,7 @@ RUN go mod download
 COPY ./cmd/simpleproxy ./cmd/simpleproxy
 
 # Build the binary with optimizations
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /app/simpleproxy ./cmd/simpleproxy
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/simpleproxy ./cmd/simpleproxy
 
 # Final Minimal Image
 FROM alpine:latest
