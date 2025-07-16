@@ -18,20 +18,29 @@ jobs:
         run: |
           echo "REPO_HOST=$(echo "${{ github.server_url }}" | sed 's~http[s]*://~~g')" >> $GITHUB_ENV
           echo "REPO_PATH=${{ github.repository }}" >> $GITHUB_ENV
+          echo "TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            network=host
 
       - name: Login to OCI registry
         run: |
           echo "${{ secrets.OCI_TOKEN }}" | docker login $REPO_HOST -u "${{ secrets.OCI_USER }}" --password-stdin
 
-      - name: Build and push Docker image
+      - name: Build and push Docker images
         run: |
-          TAG=${{ github.ref_name }} # Get the tag name from the context
-          # Build and push multi-platform Docker images
-          docker build -t $REPO_HOST/$REPO_PATH:$TAG --push .
-          # Tag and push latest
-          docker tag $REPO_HOST/$REPO_PATH:$TAG $REPO_HOST/$REPO_PATH:latest
-          docker push $REPO_HOST/$REPO_PATH:latest
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag $REPO_HOST/$REPO_PATH:$TAG \
+            --tag $REPO_HOST/$REPO_PATH:latest \
+            --push \
+            .
 
-          # Remove the local image to save storage
-          docker rmi $REPO_HOST/$REPO_PATH:$TAG
-          docker rmi $REPO_HOST/$REPO_PATH:latest
+      - name: Cleanup
+        run: |
+          docker buildx prune -f
+          docker logout $REPO_HOST
